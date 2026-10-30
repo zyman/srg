@@ -1,21 +1,10 @@
 #!/usr/bin/env python3
 """Verify or export an SRG audit ledger. Run on the gateway as its operator."""
 import argparse
-import hashlib
 import json
 import sqlite3
 from pathlib import Path
-from control import canonical
-
-
-def verify(database):
-    previous, count = '0' * 64, 0
-    for seq, timestamp, client, event, detail, parent, digest in database.execute('SELECT seq,timestamp,client,event,detail,previous,digest FROM audit ORDER BY seq'):
-        count += 1
-        if seq != count or parent != previous or hashlib.sha256(canonical([timestamp, client, event, detail, parent]).encode()).hexdigest() != digest:
-            raise ValueError('audit chain mismatch at sequence ' + str(seq))
-        previous = digest
-    return {'records': count, 'head': previous}
+from ledger import verify
 
 
 def main():

@@ -13,7 +13,7 @@ openssl req -new -newkey rsa:2048 -nodes -keyout "$srg_tmp/client.key" \
     -out "$srg_tmp/client.csr" -subj /CN=ci-client 2>/dev/null
 sudo python3 provision.py --openssl /usr/bin/openssl --client-csr "$srg_tmp/client.csr" \
     --directory /etc/srg --bind 127.0.0.1 --hostname localhost
-sudo install -o root -g root -m 0644 gateway.py control.py action_adapters.py audit.py /etc/srg/
+sudo install -o root -g root -m 0644 gateway.py control.py action_adapters.py audit.py ledger.py ssh_transport.py /etc/srg/
 python3 /etc/srg/gateway.py --config /etc/srg/policy.json --check
 sudo install -o root -g root -m 0644 examples/srg.service /etc/systemd/system/srg.service
 sudo systemctl daemon-reload

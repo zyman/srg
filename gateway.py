@@ -16,6 +16,7 @@ from urllib.parse import urlsplit
 
 from control import Controller, Denied, Conflict, validate_policy
 from action_adapters import SSHAdapter, HomeAssistantAdapter
+from ssh_transport import command as ssh_command, validate_endpoint
 
 LIMIT = 2 * 1024 * 1024
 OPERATIONS = {
@@ -66,14 +67,7 @@ def validate(config):
         if resource["kind"] == "host":
             continue
         if resource["kind"] == "ssh":
-            if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9.-]{0,252}", resource["host"]):
-                raise ValueError("invalid SSH host")
-            if not re.fullmatch(r"[a-z][a-z0-9_-]{0,31}", resource.get("user", "agentops")):
-                raise ValueError("invalid SSH user")
-            if not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", resource["credential"]):
-                raise ValueError("invalid SSH credential name")
-            if not Path(resource.get("known_hosts", "")).is_absolute():
-                raise ValueError("managed host keys required")
+            validate_endpoint(resource)
             continue
         url = urlsplit(resource["url"])
         if url.scheme != "https" or not url.hostname or url.username or url.password or url.query or url.fragment or url.path not in ("", "/"):
@@ -95,11 +89,7 @@ def fetch(resource, operation, credentials):
     if resource["kind"] == "ssh":
         # The key is restricted server-side to the same reader on every host.
         # Ignore per-user SSH configs and agents; use only the managed trust file.
-        command = ["ssh", "-F", "/dev/null", "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes",
-                   "-o", "IdentityAgent=none", "-o", "StrictHostKeyChecking=yes",
-                   "-o", "GlobalKnownHostsFile=/dev/null", "-o", "UserKnownHostsFile=" + resource["known_hosts"],
-                   "-o", "ConnectTimeout=5", "-o", "LogLevel=ERROR", "-i", str(Path(credentials) / resource["credential"]),
-                   resource.get("user", "agentops") + "@" + resource["host"], "health"]
+        command = ssh_command(resource, credentials, "health")
         with tempfile.TemporaryFile() as output:
             result = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=output,
                                     stderr=subprocess.DEVNULL, timeout=10, check=False)

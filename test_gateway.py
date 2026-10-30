@@ -142,6 +142,22 @@ class GatewayTests(unittest.TestCase):
             data = gateway.fetch({"kind": "ssh", "host": "worker.example.internal", "credential": "ssh-reader", "known_hosts": "/trusted/known_hosts"}, "health", self.root)
         self.assertNotIn("secret", data)
 
+    def test_ssh_reader_rejects_malformed_failed_and_oversize_responses(self):
+        metrics = {"uptime_seconds": 5, "load_average": [0, 0, 0], "memory_total_kib": 100, "memory_available_kib": 50, "memory_available_estimated": False}
+        cases = [(b"not-json", 0), (json.dumps({}).encode(), 0),
+                 (json.dumps({**metrics, "load_average": [0]}).encode(), 0),
+                 (json.dumps({**metrics, "memory_available_estimated": "false"}).encode(), 0),
+                 (json.dumps({**metrics, "uptime_seconds": True}).encode(), 0),
+                 (json.dumps(metrics).encode(), 1), (b"x" * (gateway.LIMIT + 1), 0)]
+        resource = {"kind": "ssh", "host": "worker.example.internal", "credential": "ssh-reader", "known_hosts": "/trusted/known_hosts"}
+        for raw, code in cases:
+            def run(command, **kwargs):
+                kwargs['stdout'].write(raw)
+                return subprocess.CompletedProcess(command, code)
+            with self.subTest(size=len(raw), code=code), patch.object(gateway.subprocess, 'run', side_effect=run):
+                with self.assertRaises(ValueError):
+                    gateway.fetch(resource, 'health', self.root)
+
     def test_ssh_rejects_option_and_path_injection(self):
         for host in ("-oProxyCommand=id", "host;id", "host/path", "host\nother"):
             with self.assertRaises(ValueError):

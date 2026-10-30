@@ -1,0 +1,387 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:srg:reference:config:1",
+  "$defs": {
+    "resource": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "host"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "https"
+            },
+            "url": {
+              "type": "string",
+              "pattern": "^https://[^/?#@\\s]+/?$",
+              "format": "uri"
+            },
+            "ca_file": {
+              "type": "string",
+              "pattern": "^/"
+            }
+          },
+          "required": [
+            "kind",
+            "url"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "ssh"
+            },
+            "host": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9.-]{0,252}$"
+            },
+            "user": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+            },
+            "credential": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            },
+            "known_hosts": {
+              "type": "string",
+              "pattern": "^/"
+            }
+          },
+          "required": [
+            "kind",
+            "host",
+            "credential",
+            "known_hosts"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "proxmox"
+            },
+            "url": {
+              "type": "string",
+              "pattern": "^https://[^/?#@\\s]+/?$",
+              "format": "uri"
+            },
+            "ca_file": {
+              "type": "string",
+              "pattern": "^/"
+            },
+            "credential": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            }
+          },
+          "required": [
+            "kind",
+            "url",
+            "credential"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "proxmox_guest"
+            },
+            "url": {
+              "type": "string",
+              "pattern": "^https://[^/?#@\\s]+/?$",
+              "format": "uri"
+            },
+            "ca_file": {
+              "type": "string",
+              "pattern": "^/"
+            },
+            "credential": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            },
+            "node": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9.-]{0,63}$"
+            },
+            "vmid": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 999999999
+            }
+          },
+          "required": [
+            "kind",
+            "url",
+            "credential",
+            "node",
+            "vmid"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "portainer"
+            },
+            "url": {
+              "type": "string",
+              "pattern": "^https://[^/?#@\\s]+/?$",
+              "format": "uri"
+            },
+            "ca_file": {
+              "type": "string",
+              "pattern": "^/"
+            },
+            "credential": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            }
+          },
+          "required": [
+            "kind",
+            "url",
+            "credential"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "home_assistant"
+            },
+            "url": {
+              "type": "string",
+              "pattern": "^https://[^/?#@\\s]+/?$",
+              "format": "uri"
+            },
+            "ca_file": {
+              "type": "string",
+              "pattern": "^/"
+            },
+            "credential": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            }
+          },
+          "required": [
+            "kind",
+            "url",
+            "credential"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "action": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "adapter": {
+              "const": "ssh"
+            },
+            "operation": {
+              "enum": [
+                "container-start",
+                "container-restart",
+                "vm-start",
+                "vm-shutdown"
+              ]
+            },
+            "risk": {
+              "const": "routine"
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "targets": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$"
+              }
+            },
+            "credential": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            },
+            "host": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9.-]{0,252}$"
+            },
+            "user": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+            },
+            "known_hosts": {
+              "type": "string",
+              "pattern": "^/"
+            }
+          },
+          "required": [
+            "adapter",
+            "operation",
+            "risk",
+            "description",
+            "targets",
+            "credential",
+            "host",
+            "known_hosts"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "adapter": {
+              "const": "home_assistant"
+            },
+            "operation": {
+              "enum": [
+                "turn-on",
+                "turn-off"
+              ]
+            },
+            "risk": {
+              "const": "routine"
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "targets": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^(light|switch|fan|input_boolean)\\.[a-z0-9_]+$"
+              }
+            },
+            "credential": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            },
+            "url": {
+              "type": "string",
+              "pattern": "^https://[^/?#@\\s]+/?$",
+              "format": "uri"
+            },
+            "ca_file": {
+              "type": "string",
+              "pattern": "^/"
+            }
+          },
+          "required": [
+            "adapter",
+            "operation",
+            "risk",
+            "description",
+            "targets",
+            "credential",
+            "url"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "urn:srg:draft:1#/$defs/controlPolicy"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "clients": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "urn:srg:draft:1#/$defs/fingerprint"
+          }
+        },
+        "read_grants": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            }
+          }
+        },
+        "write_grants": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/resource"
+          }
+        },
+        "actions": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/action"
+          }
+        },
+        "bind": {
+          "type": "string",
+          "format": "ipv4"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "state_database": {
+          "type": "string",
+          "pattern": "^/"
+        }
+      },
+      "required": [
+        "clients",
+        "resources"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

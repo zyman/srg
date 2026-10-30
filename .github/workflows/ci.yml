@@ -6,17 +6,52 @@ jobs:
   reference:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '${{ matrix.python }}'
       - name: Test reference implementation
         run: python3 -m unittest discover -s . -p 'test_*.py'
       - name: Verify standalone community archive
         run: |
           python3 make-release.py --output /tmp/srg-reference.tar.gz
+          (cd /tmp && sha256sum -c srg-reference.tar.gz.sha256)
           mkdir /tmp/srg-export
           tar -xzf /tmp/srg-reference.tar.gz -C /tmp/srg-export
-          python3 -m unittest discover -s /tmp/srg-export/srg-0.1 -p 'test_*.py'
-      - name: Verify fresh systemd installation
+          release_version=$(python3 -c 'from version import __version__; print(__version__)')
+          python3 -m unittest discover -s "/tmp/srg-export/srg-$release_version" -p 'test_*.py'
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.11'
+      - run: python3 -m pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: python3 ci/check-schemas.py
+      - name: Check complete change range
+        env:
+          BASE_SHA: '${{ github.event.pull_request.base.sha || github.event.before }}'
+        run: |
+          if [ -n "$BASE_SHA" ] && git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            git diff --check "$BASE_SHA"...HEAD
+          else
+            empty_tree=$(git hash-object -t tree /dev/null)
+            git diff --check "$empty_tree" HEAD
+          fi
+  installation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - name: Verify fresh systemd installation with OS Python
         run: sh ci/smoke-install.sh
-      - name: Check whitespace
-        run: git show --format= --check HEAD

@@ -102,7 +102,7 @@ python3 make-release.py --output /tmp/srg-reference.tar.gz
    --hostname gateway.example.internal` as root. It refuses replacement of an
    existing installation. Copy only the resulting client certificate and CA
    certificate back. Leaf certificates require renewal after one year.
-3. Install `gateway.py`, `control.py`, `action_adapters.py` and `audit.py` in
+3. Install `gateway.py`, `control.py`, `action_adapters.py`, `audit.py`, `ledger.py` and `ssh_transport.py` in
    `/etc/srg`, root-owned and not writable by the service. Start with the generated
    policy and no actions. Review `examples/policy.json` when adding actions;
    replace its dummy fingerprint with the SHA256 of the client's DER certificate.
@@ -174,11 +174,11 @@ Register a trusted adapter instance in the server's adapter registry. Implement:
 
 - `validate(action)`: reject unsupported operations, unsafe origins, identifiers
   and target scopes during startup. Never accept caller-defined code or URLs.
-- `prepare(action, target)`: return a minimal JSON precondition snapshot without
+- `prepare(action, target, context)`: return a minimal JSON precondition snapshot without
   mutating. Include stable identity/version information, not secrets.
-- `execute(action, target, before)`: recheck when possible, execute exactly the
+- `execute(action, target, before, context)`: recheck when possible, execute exactly the
   installed operation, then verify the resulting state. Raise on uncertainty;
-  never automatically retry a mutation. The controller supplies `request_id`
+  never automatically retry a mutation. The controller supplies an immutable context with `request_id`
   and an `audit(event, detail)` callback; record each backend step without secrets.
 
 Add conformance tests for client isolation, scope denial, changed preconditions,
@@ -189,7 +189,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) before proposing new operations.
 
 ## Maturity and limitations
 
-Version 0.1 is an initial reference implementation, not a certified product.
+Version 0.2.0 is an experimental reference implementation, not a certified product.
 It uses a single-process HTTP server: a long-running action delays other requests.
 Plans expire after 120 seconds and allow at most one execution attempt. External
 resource changes, backend failures, process crashes and network loss prevent

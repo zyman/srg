@@ -8,7 +8,7 @@ choose the exact actions and targets each client may use. Changes require a
 short-lived preview plan, are checked again before execution, and are recorded
 in a persistent audit ledger.
 
-**Status:** experimental v0.1 reference implementation, not an established
+**Status:** experimental v0.2.0 reference implementation, not an established
 standard or independently audited security product. Python 3.11+, standard
 library only. MIT licensed.
 
@@ -57,15 +57,19 @@ python3 client.py --config /path/to/client.json --audit
 - [Install, connect resources, revoke access and troubleshoot](INSTALL.md)
 - [Architecture, adapters and audit operations](FRAMEWORK.md)
 - [Security review, fixes and remaining limitations](SECURITY-REVIEW.md)
-- [SRG/1 draft protocol](PROTOCOL.md) and [JSON Schema](srg.schema.json)
+- [SRG/1 draft protocol](PROTOCOL.md), [protocol schema](srg.schema.json), and [reference configuration schema](gateway.schema.json)
+- [Changelog and upgrade requirements](CHANGELOG.md), [remaining work](ROADMAP.md)
 - [Generic configuration examples](examples/)
 - [Contributing](CONTRIBUTING.md), [security reporting](SECURITY.md), [license](LICENSE)
 
 GitHub Actions tests both the source checkout and an independently extracted
-portable archive. To build that archive yourself:
+portable archive on Python 3.11–3.14, validates schemas/examples, and runs a fresh
+systemd installation with the OS Python. Archives normalize ownership, timestamps
+and gzip metadata, and include a SHA256 sidecar. To build that archive yourself:
 
 ```sh
 python3 make-release.py --output /tmp/srg-reference.tar.gz
+(cd /tmp && sha256sum -c srg-reference.tar.gz.sha256)
 ```
 
 ## Limits to understand

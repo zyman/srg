@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from control import Controller, Conflict, Denied
+from control import Controller, Conflict, Denied, ActionContext
 from action_adapters import SSHAdapter, HomeAssistantAdapter
 import ssh_action
 
@@ -22,10 +22,10 @@ class FakeAdapter:
     def validate(self, action):
         pass
 
-    def prepare(self, action, target):
+    def prepare(self, action, target, context):
         return self.state.copy()
 
-    def execute(self, action, target, before):
+    def execute(self, action, target, before, context):
         self.calls += 1
         if self.fail:
             raise RuntimeError('SECRET backend failure')
@@ -118,6 +118,37 @@ class ControlTests(unittest.TestCase):
                 self.controller.apply(CLIENT, {'plan_id': plan['plan_id']})
         self.assertEqual(self.adapter.calls, 0)
 
+    def test_request_context_retains_client_identity_across_later_plans(self):
+        contexts = []
+        def prepare(action, target, context):
+            contexts.append(context)
+            return {'status': 'running'}
+        self.controller.policy['write_grants'][OTHER] = ['restart']
+        with patch.object(self.adapter, 'prepare', side_effect=prepare):
+            first = self.plan()
+            second = self.controller.plan(OTHER, {'action': 'restart', 'target': 'app'})
+        contexts[0].audit('late.first', {})
+        contexts[1].audit('late.second', {})
+        first_events = self.controller.audit_tail(CLIENT)
+        second_events = self.controller.audit_tail(OTHER)
+        self.assertTrue(any(e['event'] == 'late.first' and e['detail']['plan_id'] == first['plan_id'] for e in first_events))
+        self.assertTrue(any(e['event'] == 'late.second' and e['detail']['plan_id'] == second['plan_id'] for e in second_events))
+        self.assertFalse(any(e['event'] == 'late.second' for e in first_events))
+
+    def test_existing_ledger_index_migration_preserves_records(self):
+        from ledger import verify
+        self.plan()
+        original = verify(self.controller.db)
+        self.controller.db.execute('DROP INDEX audit_client_seq')
+        self.controller.db.commit()
+        restarted = Controller(self.policy, {'fake': self.adapter}, self.path)
+        try:
+            self.assertEqual(verify(restarted.db), original)
+            query = restarted.db.execute('EXPLAIN QUERY PLAN SELECT seq FROM audit WHERE client=? ORDER BY seq DESC LIMIT 100', (CLIENT,)).fetchall()
+            self.assertTrue(any('audit_client_seq' in row[-1] for row in query))
+        finally:
+            restarted.db.close()
+
     def test_corrupt_ledger_blocks_restart(self):
         self.plan()
         self.controller.db.execute("UPDATE audit SET detail='{}' WHERE seq=1")
@@ -174,7 +205,7 @@ class BoundaryTests(unittest.TestCase):
         adapter = HomeAssistantAdapter('/creds')
         before = {'entity_id': 'switch.quiet', 'state': 'on', 'last_changed': 'now'}
         with patch.object(adapter, 'prepare', return_value=before), patch.object(adapter, 'call') as call:
-            result = adapter.execute({'operation': 'turn-on'}, 'switch.quiet', before)
+            result = adapter.execute({'operation': 'turn-on'}, 'switch.quiet', before, ActionContext('a' * 48, lambda *args: None))
         self.assertFalse(result['changed'])
         call.assert_not_called()
 

@@ -11,7 +11,7 @@ The HTTPS reference transport requires TLS 1.2+ and a client certificate signed
 by the configured CA. SHA256 of its DER certificate is the client identity and
 must be explicitly authorized. A trusted CA alone does not authorize a client.
 The server certificate and hostname must also validate. Read permissions are
-the configured shared resource allowlist in v1; write permissions are explicit
+explicit per-client `read_grants`, denied by default; write permissions are explicit
 per-client action-name grants. No grant implies deny. Protect the client key:
 any process possessing it can exercise its granted capabilities.
 
@@ -97,3 +97,14 @@ routes return 404 without calling a backend. Each resource grant permits its
 fixed read operations. Write grants remain independent. This is a tightening
 from the initial reference implementation, where listed clients shared all reads;
 operators upgrading must explicitly migrate their read policy.
+
+
+## Schema validation
+
+`srg.schema.json` defines the portable control policy and request/response shapes.
+`gateway.schema.json` defines the built-in reference transport, resource kinds and
+adapter settings. Cross-references resolve locally in `ci/check-schemas.py`; no
+network schema retrieval is needed. Reference validation and runtime checks are
+complementary: the runtime also verifies that grants refer to installed resources,
+actions and authorized clients. Extension adapters need their own configuration
+schema and runtime validator.

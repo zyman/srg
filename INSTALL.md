@@ -47,7 +47,7 @@ sudo python3 provision.py --openssl /usr/bin/openssl \
   --client-csr /tmp/srg-client.csr --directory /etc/srg \
   --bind 192.0.2.10 --hostname gateway.example.internal
 sudo install -o root -g root -m 0644 \
-  gateway.py control.py action_adapters.py audit.py /etc/srg/
+  gateway.py control.py action_adapters.py audit.py ledger.py ssh_transport.py /etc/srg/
 python3 /etc/srg/gateway.py --config /etc/srg/policy.json --check
 sudo install -o root -g root -m 0644 examples/srg.service /etc/systemd/system/srg.service
 sudo systemctl daemon-reload
@@ -210,7 +210,8 @@ by [Docker](https://docs.docker.com/reference/cli/docker/container/restart/).
 
 ## Operations and troubleshooting
 
-- **Upgrade:** back up the ledger using `audit.py --backup`, review release changes,
+- **Upgrade:** read [CHANGELOG.md](CHANGELOG.md) first (0.2.0 adds runtime modules
+  and changes the adapter interface), then back up the ledger using `audit.py --backup`, review release changes,
   replace only source/unit files, validate policy, and restart. Preserve `/etc/srg`
   identities, backend secrets and `/var/lib/srg`. This change introduces explicit
   `read_grants`; older policies with no grants now expose no resources.

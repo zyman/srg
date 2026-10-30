@@ -9,6 +9,15 @@ import re
 import secrets
 import sqlite3
 import time
+from dataclasses import dataclass
+from typing import Callable
+from ledger import canonical, verify
+
+
+@dataclass(frozen=True)
+class ActionContext:
+    request_id: str
+    audit: Callable
 
 
 class Denied(ValueError):
@@ -17,10 +26,6 @@ class Denied(ValueError):
 
 class Conflict(ValueError):
     pass
-
-
-def canonical(value):
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
 
 def exact(value, keys):
@@ -66,10 +71,10 @@ class Controller:
         self.db = sqlite3.connect(database, check_same_thread=False)
         self.db.execute('CREATE TABLE IF NOT EXISTS plans (id TEXT PRIMARY KEY, client TEXT NOT NULL, revision TEXT NOT NULL, expires REAL NOT NULL, action TEXT NOT NULL, target TEXT NOT NULL, before_state TEXT NOT NULL, status TEXT NOT NULL, result TEXT)')
         self.db.execute('CREATE TABLE IF NOT EXISTS audit (seq INTEGER PRIMARY KEY, timestamp REAL NOT NULL, client TEXT NOT NULL, event TEXT NOT NULL, detail TEXT NOT NULL, previous TEXT NOT NULL, digest TEXT NOT NULL)')
+        self.db.execute('CREATE INDEX IF NOT EXISTS audit_client_seq ON audit(client, seq)')
         self.db.execute('PRAGMA synchronous=FULL')
         self.db.commit()
         # Refuse to append to a corrupt ledger; operators must investigate first.
-        from audit import verify
         try:
             verify(self.db)
         except Exception:
@@ -113,10 +118,9 @@ class Controller:
             self.audit(client, "plan.denied", {"request_digest": hashlib.sha256(canonical(request).encode()).hexdigest()})
             raise
         plan_id, expires = secrets.token_hex(24), self.clock() + 120
-        adapter.request_id = plan_id
-        adapter.audit = lambda event, detail: self.audit(client, event, {"plan_id": plan_id, "action": request["action"], **detail})
+        context = ActionContext(plan_id, lambda event, detail: self.audit(client, event, {"plan_id": plan_id, "action": request["action"], **detail}))
         self.audit(client, "prepare.started", {"plan_id": plan_id, "action": request["action"], "target": request["target"]})
-        before = adapter.prepare(action, request["target"])
+        before = adapter.prepare(action, request["target"], context)
         self.audit(client, "prepare.verified", {"plan_id": plan_id, "action": request["action"], "target": request["target"], "state_digest": hashlib.sha256(canonical(before).encode()).hexdigest()})
         # Keep an installation from accumulating unbounded expired previews.
         self.db.execute("DELETE FROM plans WHERE expires < ? AND status = 'planned'", (self.clock() - 86400,))
@@ -143,8 +147,7 @@ class Controller:
             self.audit(client, "apply.rejected", {"plan_id": plan_id, "status": row[5]})
             raise Conflict("plan expired, policy changed, or execution already claimed")
         action, adapter = self.action(client, row[2], row[3])
-        adapter.request_id = plan_id
-        adapter.audit = lambda event, detail: self.audit(client, event, {"plan_id": plan_id, **detail})
+        context = ActionContext(plan_id, lambda event, detail: self.audit(client, event, {"plan_id": plan_id, **detail}))
         self.audit(client, "apply.requested", {"plan_id": plan_id, "action": row[2], "target": row[3]})
         # Claim durably before all execution and verification. No automatic retries.
         changed = self.db.execute("UPDATE plans SET status='running' WHERE id=? AND status='planned'", (plan_id,)).rowcount
@@ -153,11 +156,10 @@ class Controller:
             raise Conflict("plan already claimed")
         try:
             before = json.loads(row[4])
-            if adapter.prepare(action, row[3]) != before:
+            if adapter.prepare(action, row[3], context) != before:
                 raise Conflict("target changed since preview")
             self.audit(client, "execute.started", {"plan_id": plan_id, "action": row[2], "target": row[3]})
-            adapter.audit = lambda event, detail: self.audit(client, event, {"plan_id": plan_id, **detail})
-            result = adapter.execute(action, row[3], before)
+            result = adapter.execute(action, row[3], before, context)
             self.audit(client, "execute.verified", {"plan_id": plan_id, "result_digest": hashlib.sha256(canonical(result).encode()).hexdigest()})
             canonical(result)
         except Exception as error:
