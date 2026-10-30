@@ -55,3 +55,29 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
       - name: Verify fresh systemd installation with OS Python
         run: sh ci/smoke-install.sh
+  mcp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12', '3.13', '3.14']
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '${{ matrix.python }}'
+      - name: Install optional MCP dependencies
+        run: python3 -m pip install -r requirements-mcp.txt
+      - name: Verify real MCP and mTLS boundary
+        run: |
+          python3 -c 'import mcp'
+          python3 -m unittest test_mcp test_gateway_client
+      - name: Verify MCP from standalone archive
+        run: |
+          python3 make-release.py --output /tmp/srg-mcp.tar.gz
+          mkdir /tmp/srg-mcp-export
+          tar -xzf /tmp/srg-mcp.tar.gz -C /tmp/srg-mcp-export
+          release_version=$(python3 -c 'from version import __version__; print(__version__)')
+          cd "/tmp/srg-mcp-export/srg-$release_version"
+          python3 -m unittest test_mcp test_gateway_client

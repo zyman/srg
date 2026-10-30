@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "srg": {
+      "command": "/absolute/path/to/srg/.venv-mcp/bin/python",
+      "args": [
+        "/absolute/path/to/srg/mcp_server.py",
+        "--config",
+        "/absolute/path/to/private/client.json"
+      ]
+    }
+  }
+}

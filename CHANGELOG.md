@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.0 — 2026-10-30
+
+- Optional local stdio MCP bridge with seven fixed tools and a pinned official
+  SDK dependency. Existing mTLS client identity and gateway permissions apply.
+- Shared standard-library CLI/MCP transport: strict fixed routes, bounded
+  responses, redacted errors, TLS verification and no automatic retries.
+- MCP subprocess integration tests exercise real mTLS, SQLite auditing, grants,
+  client isolation, stale/expired/replayed plans, audit failure, and response loss.
+- Generic host configuration, MCP setup/recovery/audit documentation, and CI for
+  optional MCP support on Python 3.11–3.14, including extracted release archives.
+
+### Migration
+
+The gateway runtime and SRG/1 wire protocol are unchanged from 0.2.0. Install
+`gateway_client.py` alongside `client.py` on CLI clients. MCP users additionally
+install `mcp_server.py`, `version.py` and requirements-mcp.txt on the agent host.
+No gateway policy expansion, backend tokens or live deployment changes are needed.
+
 ## 0.2.0
 
 ### Migration

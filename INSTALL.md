@@ -94,8 +94,8 @@ Expected: the resource list contains `gateway`, health returns numeric metrics,
 capabilities contains an empty `actions` object, and audit contains your reads.
 Give the AI client access to this client configuration and key only. It does not
 need any backend token, CA signing key, administrative SSH key or Bitwarden
-session. There is no built-in MCP integration; an agent can invoke this CLI or
-use the documented HTTPS API. Keep the checkout/code read-only to untrusted users.
+session. Agents can invoke this CLI, use the documented HTTPS API, or connect through
+the optional [local MCP bridge](MCP.md). Keep the checkout/code read-only to untrusted users.
 
 ## 4. Add a read resource
 

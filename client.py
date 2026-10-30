@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """Client identity permits only gateway operations; no upstream secrets."""
 import argparse
-import http.client
 import json
 from pathlib import Path
 import re
-import ssl
-from urllib.parse import urlsplit
+from gateway_client import GatewayClient, GatewayError
 
 
 def main():
@@ -33,37 +31,27 @@ def main():
         parser.error("supply both resource and operation, or neither to list resources")
     if args.resource and not all(re.fullmatch(r"[a-z][a-z0-9-]{0,63}", x) for x in (args.resource, args.operation)):
         parser.error("invalid resource or operation")
-    config = json.loads(Path(args.config).read_text())
-    url = urlsplit(config["url"])
-    if url.scheme != "https" or not url.hostname or url.username or url.password or url.path not in ("", "/") or url.query or url.fragment:
-        parser.error("gateway URL must be an HTTPS origin")
-    context = ssl.create_default_context(cafile=config["ca_file"])
-    context.load_cert_chain(config["certificate"], config["key"])
-    connection = http.client.HTTPSConnection(url.hostname, url.port or 443, context=context, timeout=130)
-    path = f"/v1/{args.resource}/{args.operation}" if args.resource else "/v1/resources"
-    method, body, headers = "GET", None, {}
-    if args.capabilities:
-        path = "/v1/capabilities"
+    operation, arguments = 'resources', {}
+    if args.resource:
+        operation, arguments = 'read', {'resource': args.resource, 'operation': args.operation}
+    elif args.capabilities:
+        operation = 'capabilities'
     elif args.audit:
-        path = "/v1/audit"
+        operation = 'audit'
     elif args.status:
-        path = "/v1/plans/" + args.status
-    elif args.plan or args.apply:
-        method = "POST"
-        path = "/v1/plans" if args.plan else "/v1/apply"
-        body = json.dumps({"action": args.plan, "target": args.target} if args.plan else {"plan_id": args.apply})
-        headers = {"Content-Type": "application/json"}
+        operation, arguments = 'status', {'plan_id': args.status}
+    elif args.plan:
+        operation, arguments = 'plan', {'action': args.plan, 'target': args.target}
+    elif args.apply:
+        operation, arguments = 'apply', {'plan_id': args.apply}
     try:
-        connection.request(method, path, body=body, headers=headers)
-        response = connection.getresponse()
-        raw = response.read(2 * 1024 * 1024 + 1)
-        if len(raw) > 2 * 1024 * 1024:
-            raise ValueError("response too large")
-        if response.status != 200:
-            parser.exit(1, f"Gateway request failed (HTTP {response.status}).\n")
-        print(json.dumps(json.loads(raw), indent=2))
-    finally:
-        connection.close()
+        result = GatewayClient(args.config).invoke(operation, arguments)
+        print(json.dumps(result, indent=2, allow_nan=False))
+    except GatewayError as error:
+        recovery = ' Do not retry apply automatically; check plan status and inspect the target.' if operation == 'apply' else ''
+        status = f' (HTTP {error.http_status})' if error.http_status is not None else ''
+        parser.exit(1, f'{error}{status}{recovery}\n')
+
 
 
 if __name__ == "__main__":

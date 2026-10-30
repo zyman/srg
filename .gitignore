@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv-mcp/
 .env
 *.key
 *.pem

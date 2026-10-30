@@ -17,11 +17,13 @@ expanded rather than treating the path as wholly untested.
 - Distinct executor busy outcomes, preserving one-attempt semantics and no
   automatic retries after uncertain execution.
 
-## Agent integration
+## Agent integration delivered in 0.3.0
 
-- Optional stdio MCP wrapper, using existing mTLS client authority and separate
-  plan/apply tools. Preserve scope, audit correlation, uncertainty and replay rules.
-  Keep core stdlib-only; assess the official SDK as an optional integration extra.
+The optional [stdio MCP bridge](MCP.md) uses existing mTLS client authority and
+separate plan/apply tools. It preserves scope, audit correlation, uncertainty and
+replay rules. The gateway and CLI remain stdlib-only; the official SDK is an
+optional dependency on the agent computer. MCP resource URIs and other protocol
+extensions remain outside the initial tool-based interface.
 
 ## Defer until needed
 

@@ -28,7 +28,8 @@ flowchart LR
 
 See [PROTOCOL.md](PROTOCOL.md) for exact routes, schemas and failure semantics.
 The client is optional; any agent with HTTPS/mTLS support can use the protocol.
-An MCP wrapper could expose the same capabilities, but is not implemented here.
+The optional [MCP stdio bridge](MCP.md) exposes the same capabilities using the
+existing mTLS client identity.
 The server cannot prove that a request came from a particular model or that a
 human asked for it: possession of an authorized client key is the authority.
 Keep agent instructions explicit: mutate only when the owner asks. Issue distinct
@@ -189,7 +190,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) before proposing new operations.
 
 ## Maturity and limitations
 
-Version 0.2.0 is an experimental reference implementation, not a certified product.
+Version 0.3.0 is an experimental reference implementation, not a certified product.
 It uses a single-process HTTP server: a long-running action delays other requests.
 Plans expire after 120 seconds and allow at most one execution attempt. External
 resource changes, backend failures, process crashes and network loss prevent

@@ -1,0 +1,2 @@
+# Optional local MCP bridge only. Gateway and CLI remain standard-library-only.
+mcp==2.3.0

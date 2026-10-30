@@ -41,3 +41,9 @@ Update `version.py` and CHANGELOG.md together. After CI succeeds, tag the releas
 verify its `.sha256` receipt. Reproducibility assumes the same source and build
 toolchain; normalized metadata removes dependence on local paths/ownership/times. The included manifest is deliberately an allowlist;
 never archive an entire operator checkout. Follow ROADMAP.md for deferred work.
+
+
+MCP tests are optional in the core stdlib-only suite. To exercise them locally,
+install `requirements-mcp.txt` in the development environment and run
+`python -m unittest test_mcp test_gateway_client`. CI installs the pinned SDK in
+its dedicated MCP matrix, so those tests must run rather than silently skip.

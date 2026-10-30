@@ -7,7 +7,8 @@ import gzip
 import hashlib
 from version import __version__
 
-FILES = ['gateway.py', 'client.py', 'control.py', 'action_adapters.py', 'audit.py',
+FILES = ['gateway_client.py', 'mcp_server.py', 'requirements-mcp.txt', 'test_mcp.py',
+         'test_gateway_client.py', 'MCP.md', 'examples/mcp-client.json', 'gateway.py', 'client.py', 'control.py', 'action_adapters.py', 'audit.py',
          'ssh_action.py', 'provision.py', 'test_gateway.py', 'test_control.py',
          'make-release.py', 'ledger.py', 'ssh_transport.py', 'version.py', 'requirements-dev.txt', 'pyproject.toml',
          'test_release.py', 'test_client.py', 'CHANGELOG.md', 'ROADMAP.md', 'README.md', 'SECURITY.md', 'INSTALL.md', 'SECURITY-REVIEW.md',

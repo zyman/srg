@@ -8,9 +8,9 @@ choose the exact actions and targets each client may use. Changes require a
 short-lived preview plan, are checked again before execution, and are recorded
 in a persistent audit ledger.
 
-**Status:** experimental v0.2.0 reference implementation, not an established
-standard or independently audited security product. Python 3.11+, standard
-library only. MIT licensed.
+**Status:** experimental v0.3.0 reference implementation, not an established
+standard or independently audited security product. Gateway and CLI: Python
+3.11+, standard library only. MCP uses optional dependencies. MIT licensed.
 
 ## What it provides
 
@@ -51,6 +51,13 @@ python3 client.py --config /path/to/client.json --apply PLAN_ID
 python3 client.py --config /path/to/client.json --status PLAN_ID
 python3 client.py --config /path/to/client.json --audit
 ```
+
+## Use from AI agents
+
+The optional [MCP stdio bridge](MCP.md) exposes discovery, reads, capabilities,
+plan/apply, status and audit using your existing client identity. Install it on
+the agent computer; gateway restrictions and audit logging remain authoritative.
+See [the sample host configuration](examples/mcp-client.json).
 
 ## Documentation
 
