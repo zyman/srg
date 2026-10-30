@@ -1,0 +1,17 @@
+{
+  "bind": "127.0.0.1",
+  "port": 9444,
+  "clients": ["0000000000000000000000000000000000000000000000000000000000000000"],
+  "resources": {"gateway": {"kind": "host"}},
+  "state_database": "/var/lib/srg/control.sqlite3",
+  "write_grants": {"0000000000000000000000000000000000000000000000000000000000000000": ["app-restart"]},
+  "actions": {
+    "app-restart": {
+      "adapter": "ssh", "operation": "container-restart", "risk": "routine",
+      "description": "Restart the existing demo application",
+      "host": "worker.example.internal", "user": "agentops",
+      "credential": "ssh-writer", "known_hosts": "/etc/srg/known_hosts",
+      "targets": ["demo-app"]
+    }
+  }
+}

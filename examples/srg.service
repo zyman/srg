@@ -1,0 +1,34 @@
+[Unit]
+Description=Scoped Resource Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 /etc/srg/gateway.py --config /etc/srg/policy.json
+DynamicUser=yes
+StateDirectory=srg
+StateDirectoryMode=0700
+LoadCredential=server-cert:/etc/srg/secrets/server-cert
+LoadCredential=server-key:/etc/srg/secrets/server-key
+LoadCredential=client-ca:/etc/srg/secrets/client-ca
+LoadCredential=ssh-writer:/etc/srg/secrets/ssh-writer
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+UMask=0077
+MemoryMax=128M
+TasksMax=16
+LimitFSIZE=64M
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

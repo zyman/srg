@@ -1,0 +1,6 @@
+{
+  "url": "https://gateway.example.internal:9444",
+  "ca_file": "/absolute/path/to/ca.pem",
+  "certificate": "/absolute/path/to/client.pem",
+  "key": "/absolute/path/to/client.key"
+}
