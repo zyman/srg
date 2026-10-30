@@ -15,4 +15,3 @@ def verify(database):
             raise ValueError('audit chain mismatch at sequence ' + str(seq))
         previous = digest
     return {'records': count, 'head': previous}
-
