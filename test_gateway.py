@@ -165,8 +165,6 @@ class GatewayTests(unittest.TestCase):
 
     def test_reader_rejects_arbitrary_remote_commands(self):
         reader = Path(__file__).with_name("reader.sh")
-        if not reader.exists():
-            reader = Path(__file__).parents[2] / "ansible/roles/access_reader/files/reader.sh"
         for command in ("id", "health; id", "scp -t /tmp/file", ""):
             result = subprocess.run(["/bin/sh", str(reader)], env={"SSH_ORIGINAL_COMMAND": command}, capture_output=True)
             self.assertEqual(result.returncode, 64)
