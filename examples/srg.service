@@ -11,7 +11,8 @@ StateDirectoryMode=0700
 LoadCredential=server-cert:/etc/srg/secrets/server-cert
 LoadCredential=server-key:/etc/srg/secrets/server-key
 LoadCredential=client-ca:/etc/srg/secrets/client-ca
-LoadCredential=ssh-writer:/etc/srg/secrets/ssh-writer
+# Add backend credentials only after creating the corresponding secret files.
+# LoadCredential=ssh-writer:/etc/srg/secrets/ssh-writer
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes

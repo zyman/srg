@@ -1,0 +1,12 @@
+{
+  "light-on": {
+    "adapter": "home_assistant",
+    "operation": "turn-on",
+    "risk": "routine",
+    "description": "Turn on the demo light",
+    "url": "https://ha.example.internal",
+    "ca_file": "/etc/srg/backend-ca.pem",
+    "credential": "ha",
+    "targets": ["light.demo"]
+  }
+}

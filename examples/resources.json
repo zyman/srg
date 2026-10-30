@@ -1,0 +1,9 @@
+{
+  "gateway": {"kind": "host"},
+  "site": {"kind": "https", "url": "https://service.example.internal", "ca_file": "/etc/srg/backend-ca.pem"},
+  "worker": {"kind": "ssh", "host": "worker.example.internal", "user": "agentops", "credential": "ssh-reader", "known_hosts": "/etc/srg/known_hosts"},
+  "pve": {"kind": "proxmox", "url": "https://pve.example.internal:8006", "credential": "pve", "ca_file": "/etc/srg/backend-ca.pem"},
+  "guest": {"kind": "proxmox_guest", "url": "https://pve.example.internal:8006", "node": "node-a", "vmid": 100, "credential": "pve", "ca_file": "/etc/srg/backend-ca.pem"},
+  "portainer": {"kind": "portainer", "url": "https://portainer.example.internal:9443", "credential": "portainer", "ca_file": "/etc/srg/backend-ca.pem"},
+  "ha": {"kind": "home_assistant", "url": "https://ha.example.internal", "credential": "ha", "ca_file": "/etc/srg/backend-ca.pem"}
+}

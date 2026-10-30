@@ -41,6 +41,11 @@
           "type": "object", "propertyNames": {"$ref": "#/$defs/actionName"},
           "additionalProperties": {"$ref": "#/$defs/action"}
         },
+        "read_grants": {
+          "type": "object", "propertyNames": {"$ref": "#/$defs/fingerprint"},
+          "additionalProperties": {"type": "array", "items": {"$ref": "#/$defs/actionName"}},
+          "description": "Reference transport resource names. Missing grants authorize no reads."
+        },
         "write_grants": {
           "type": "object", "propertyNames": {"$ref": "#/$defs/fingerprint"},
           "additionalProperties": {"type": "array", "items": {"$ref": "#/$defs/actionName"}}

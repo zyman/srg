@@ -64,13 +64,18 @@ def validate_request(request, policy):
 
 
 def execute(operation, target, before):
+    # Names can be reassigned by external Docker clients after the snapshot.
+    # Mutate and health-check only the immutable identity that was previewed.
+    identity = before.get('id') if operation.startswith('container-') else target
+    if operation.startswith('container-') and (type(identity) is not str or not re.fullmatch(r'[a-f0-9]{64}', identity)):
+        raise ValueError('invalid container identity')
     if operation == 'container-start':
         if before['status'] != 'running':
-            run(['/usr/bin/docker', 'start', target], timeout=40)
+            run(['/usr/bin/docker', 'start', identity], timeout=40)
     elif operation == 'container-restart':
         if before['status'] != 'running':
             raise ValueError('restart requires a running container')
-        run(['/usr/bin/docker', 'restart', '--timeout', '30', target], timeout=45)
+        run(['/usr/bin/docker', 'restart', '--timeout', '30', identity], timeout=45)
     elif operation == 'vm-start':
         if before['status'] != 'running':
             run(['/usr/sbin/qm', 'start', target], timeout=60)
@@ -86,7 +91,7 @@ def execute(operation, target, before):
             if operation.startswith('container-'):
                 if after['id'] != before['id'] or after['image'] != before['image']:
                     raise ValueError('container identity changed')
-                health = run(['/usr/bin/docker', 'inspect', '--format', '{{if index .State "Health"}}{{index (index .State "Health") "Status"}}{{else}}none{{end}}', target]).strip()
+                health = run(['/usr/bin/docker', 'inspect', '--format', '{{if index .State "Health"}}{{index (index .State "Health") "Status"}}{{else}}none{{end}}', identity]).strip()
                 if health not in ('none', 'healthy'):
                     if attempt < 9:
                         time.sleep(1)

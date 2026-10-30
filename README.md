@@ -14,7 +14,7 @@ library only. MIT licensed.
 
 ## What it provides
 
-- Mutual TLS and per-client write grants; no implicit write permissions.
+- Mutual TLS and explicit per-client read/write grants; no implicit write permissions.
 - Plan/apply flow with expiry, state preconditions and durable replay protection.
 - Fixed adapters for selected Docker, Proxmox and Home Assistant actions.
 - Persistent, hash-chained auditing, plus remote command correlation.
@@ -38,7 +38,7 @@ modify real infrastructure. OpenSSL must be installed for certificate tests.
 
 ## Deploy and use
 
-Follow the [deployment guide](FRAMEWORK.md#deploy-your-own-instance) to provision
+Follow the [step-by-step installation guide](INSTALL.md) to provision
 client/server identities, credentials, allowlists and the systemd service.
 Examples contain placeholders only; do not use the dummy fingerprint as a real
 identity. Keep deployment configuration and private keys outside this repository.
@@ -54,7 +54,9 @@ python3 client.py --config /path/to/client.json --audit
 
 ## Documentation
 
-- [Architecture, installation, adapters and audit operations](FRAMEWORK.md)
+- [Install, connect resources, revoke access and troubleshoot](INSTALL.md)
+- [Architecture, adapters and audit operations](FRAMEWORK.md)
+- [Security review, fixes and remaining limitations](SECURITY-REVIEW.md)
 - [SRG/1 draft protocol](PROTOCOL.md) and [JSON Schema](srg.schema.json)
 - [Generic configuration examples](examples/)
 - [Contributing](CONTRIBUTING.md), [security reporting](SECURITY.md), [license](LICENSE)

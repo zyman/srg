@@ -87,3 +87,13 @@ the full ledger with the operator utility, not a filtered tail. HTTP summaries
 are additionally emitted to stdout; TLS failures cannot carry an authenticated
 client identity. Agent reasoning, other tools and administrative bootstrap
 steps outside the gateway are outside this protocol's audit boundary.
+
+## Reference read authorization
+
+The HTTPS reference implementation uses `read_grants`, an object mapping each
+listed client fingerprint to exact configured resource names. Missing grants
+allow no reads. `/v1/resources` lists only granted resources; ungranted resource
+routes return 404 without calling a backend. Each resource grant permits its
+fixed read operations. Write grants remain independent. This is a tightening
+from the initial reference implementation, where listed clients shared all reads;
+operators upgrading must explicitly migrate their read policy.

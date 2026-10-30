@@ -118,6 +118,14 @@ class ControlTests(unittest.TestCase):
                 self.controller.apply(CLIENT, {'plan_id': plan['plan_id']})
         self.assertEqual(self.adapter.calls, 0)
 
+    def test_corrupt_ledger_blocks_restart(self):
+        self.plan()
+        self.controller.db.execute("UPDATE audit SET detail='{}' WHERE seq=1")
+        self.controller.db.commit()
+        with self.assertRaises(ValueError):
+            Controller(self.policy, {'fake': self.adapter}, self.path)
+        self.assertEqual(self.adapter.calls, 0)
+
     def test_destructive_risk_cannot_be_installed(self):
         policy = copy.deepcopy(self.policy)
         policy['actions']['restart']['risk'] = 'destructive'
@@ -142,6 +150,19 @@ class BoundaryTests(unittest.TestCase):
         for url, targets in [('http://host', ['light.room']), ('https://host', ['lock.front_door']), ('https://host/path', ['light.room'])]:
             with self.assertRaises(ValueError):
                 ha.validate({'url': url, 'operation': 'turn-on', 'credential': 'ha', 'targets': targets})
+
+    def test_docker_mutation_uses_previewed_id_even_if_name_is_reassigned(self):
+        before = {'status': 'running', 'id': 'a' * 64, 'image': 'sha256:old'}
+        replacement = {**before, 'id': 'b' * 64}
+        with patch.object(ssh_action, 'run', return_value='none') as run, patch.object(ssh_action, 'snapshot', return_value=replacement):
+            with self.assertRaises(ValueError):
+                ssh_action.execute('container-restart', 'app', before)
+        self.assertEqual(run.call_args_list[0].args[0], ['/usr/bin/docker', 'restart', '--timeout', '30', 'a' * 64])
+        self.assertEqual(run.call_count, 1)
+        with patch.object(ssh_action, 'run') as run:
+            with self.assertRaises(ValueError):
+                ssh_action.execute('container-start', 'app', {'status': 'exited', 'id': '--help'})
+            run.assert_not_called()
 
     def test_vm_shutdown_never_force_stops(self):
         before = {'status': 'running'}

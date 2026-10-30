@@ -46,8 +46,10 @@ def validate_policy(policy, adapters):
         if action.get("risk") != "routine":
             raise ValueError("only routine actions can be installed")
         adapters[action["adapter"]].validate(action)
+    if not isinstance(policy.get("write_grants", {}), dict):
+        raise ValueError("write_grants must be an object")
     for client, grants in policy.get("write_grants", {}).items():
-        if client not in policy["clients"] or not isinstance(grants, list) or any(x not in actions for x in grants):
+        if client not in policy["clients"] or not isinstance(grants, list) or any(type(x) is not str or x not in actions for x in grants):
             raise ValueError("invalid write grants")
 
 
@@ -66,11 +68,18 @@ class Controller:
         self.db.execute('CREATE TABLE IF NOT EXISTS audit (seq INTEGER PRIMARY KEY, timestamp REAL NOT NULL, client TEXT NOT NULL, event TEXT NOT NULL, detail TEXT NOT NULL, previous TEXT NOT NULL, digest TEXT NOT NULL)')
         self.db.execute('PRAGMA synchronous=FULL')
         self.db.commit()
+        # Refuse to append to a corrupt ledger; operators must investigate first.
+        from audit import verify
+        try:
+            verify(self.db)
+        except Exception:
+            self.db.close()
+            raise
 
     def audit(self, client, event, detail):
         previous = self.db.execute('SELECT digest FROM audit ORDER BY seq DESC LIMIT 1').fetchone()
         previous = previous[0] if previous else '0' * 64
-        timestamp = self.clock()
+        timestamp = float(self.clock())
         encoded = canonical(detail)
         digest = hashlib.sha256(canonical([timestamp, client, event, encoded, previous]).encode()).hexdigest()
         self.db.execute('INSERT INTO audit(timestamp,client,event,detail,previous,digest) VALUES(?,?,?,?,?,?)', (timestamp, client, event, encoded, previous, digest))

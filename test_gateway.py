@@ -35,7 +35,7 @@ class GatewayTests(unittest.TestCase):
 
     def setUp(self):
         self.server = gateway.Server(("127.0.0.1", 0), gateway.Handler)
-        self.server.policy = gateway.validate({"clients": [self.fingerprint], "resources": {
+        self.server.policy = gateway.validate({"clients": [self.fingerprint], "read_grants": {self.fingerprint: ["pve"]}, "resources": {
             "pve": {"kind": "proxmox", "url": "https://localhost", "credential": "pve"}}})
         self.server.credentials = self.root
         self.server.tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -64,6 +64,22 @@ class GatewayTests(unittest.TestCase):
 
     def test_authorized_inventory(self):
         self.assertEqual(self.request("/v1/resources"), (200, {"pve": ["nodes", "guests"]}))
+
+    def test_read_grants_default_deny_and_isolate_clients(self):
+        other = hashlib.sha256(ssl.PEM_cert_to_DER_cert((self.root / "other.pem").read_text())).hexdigest()
+        self.server.policy["clients"].append(other)
+        with patch.object(gateway, "fetch") as fetch:
+            self.assertEqual(self.request("/v1/resources", identity="other"), (200, {}))
+            self.assertEqual(self.request("/v1/pve/nodes", identity="other")[0], 404)
+            self.server.policy.pop("read_grants")
+            self.assertEqual(self.request("/v1/resources"), (200, {}))
+            self.assertEqual(self.request("/v1/pve/nodes")[0], 404)
+            fetch.assert_not_called()
+
+    def test_invalid_read_grants_fail_validation(self):
+        for grants in ([], {self.fingerprint: ["unknown"]}, {"b" * 64: ["pve"]}, {self.fingerprint: "pve"}):
+            with self.assertRaises(ValueError):
+                gateway.validate({**self.server.policy, "read_grants": grants})
 
     def test_ca_signed_but_unlisted_client_is_denied(self):
         self.assertEqual(self.request("/v1/resources", identity="other")[0], 403)

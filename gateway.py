@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import http.client
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -13,7 +14,7 @@ import tempfile
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlsplit
 
-from control import Controller, Denied, Conflict
+from control import Controller, Denied, Conflict, validate_policy
 from action_adapters import SSHAdapter, HomeAssistantAdapter
 
 LIMIT = 2 * 1024 * 1024
@@ -41,9 +42,20 @@ OPERATIONS = {
 
 
 def validate(config):
-    if not config.get("clients") or any(not re.fullmatch(r"[a-f0-9]{64}", x) for x in config["clients"]):
+    if not isinstance(config, dict):
+        raise ValueError("policy must be an object")
+    if not isinstance(config.get("clients"), list) or not config["clients"] or any(type(x) is not str or not re.fullmatch(r"[a-f0-9]{64}", x) for x in config["clients"]):
         raise ValueError("clients must contain SHA256 certificate fingerprints")
+    if not isinstance(config.get("resources"), dict):
+        raise ValueError("resources must be an object")
+    ipaddress.IPv4Address(config.get("bind", "127.0.0.1"))
+    if "state_database" in config and not Path(config["state_database"]).is_absolute():
+        raise ValueError("state_database must be an absolute path")
+    if "port" in config and (type(config["port"]) is not int or not 1 <= config["port"] <= 65535):
+        raise ValueError("invalid listening port")
     for name, resource in config["resources"].items():
+        if not isinstance(resource, dict) or "kind" not in resource:
+            raise ValueError("resource kind required")
         if not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", name):
             raise ValueError("invalid resource name")
         if resource["kind"] not in OPERATIONS:
@@ -60,12 +72,20 @@ def validate(config):
                 raise ValueError("invalid SSH user")
             if not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", resource["credential"]):
                 raise ValueError("invalid SSH credential name")
+            if not Path(resource.get("known_hosts", "")).is_absolute():
+                raise ValueError("managed host keys required")
             continue
         url = urlsplit(resource["url"])
         if url.scheme != "https" or not url.hostname or url.username or url.password or url.query or url.fragment or url.path not in ("", "/"):
             raise ValueError("resource URL must be an HTTPS origin")
         if resource["kind"] != "https" and not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", resource["credential"]):
             raise ValueError("invalid credential name")
+    grants = config.get("read_grants", {})
+    if not isinstance(grants, dict):
+        raise ValueError("read_grants must be an object")
+    for client, names in grants.items():
+        if client not in config["clients"] or not isinstance(names, list) or any(type(name) is not str or name not in config["resources"] for name in names):
+            raise ValueError("invalid read grants")
     return config
 
 
@@ -181,7 +201,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def setup(self):
         super().setup()
-        self.connection.settimeout(120)
+        self.connection.settimeout(10)
 
     def log_message(self, *_):
         pass  # No raw URLs, headers, bodies or upstream errors in logs.
@@ -222,13 +242,13 @@ class Handler(BaseHTTPRequestHandler):
             except Denied:
                 return self.reply(403, {"error": "plan not available"})
         if self.path == "/v1/resources":
-            return self.reply(200, {name: list(OPERATIONS[value["kind"]]) for name, value in config["resources"].items()}, "resources")
+            return self.reply(200, {name: list(OPERATIONS[value["kind"]]) for name, value in config["resources"].items() if name in config.get("read_grants", {}).get(fingerprint, [])}, "resources")
         match = re.fullmatch(r"/v1/([a-z][a-z0-9-]{0,63})/([a-z]+)", self.path)
         if not match:
             return self.reply(404, {"error": "operation not available"})
         name, operation = match.groups()
         resource = config["resources"].get(name)
-        if resource is None or operation not in OPERATIONS[resource["kind"]]:
+        if resource is None or name not in config.get("read_grants", {}).get(fingerprint, []) or operation not in OPERATIONS[resource["kind"]]:
             return self.reply(404, {"error": "operation not available"})
         action = name + "/" + operation
         try:
@@ -297,15 +317,23 @@ class Server(HTTPServer):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
+    parser.add_argument("--check", action="store_true", help="Validate policy without opening sockets or reading credentials")
     args = parser.parse_args()
-    config = validate(json.loads(Path(args.config).read_text()))
+    try:
+        config = validate(json.loads(Path(args.config).read_text()))
+        validate_policy(config, {"ssh": SSHAdapter("/unused"), "home_assistant": HomeAssistantAdapter("/unused")})
+    except (ValueError, KeyError, TypeError, OSError):
+        parser.exit(2, "Invalid policy; check required fields, types, grants and adapter settings.\n")
+    if args.check:
+        print("Policy valid (credentials, TLS and backend reachability not checked).")
+        return
     credentials = os.environ["CREDENTIALS_DIRECTORY"]
     tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     tls.minimum_version = ssl.TLSVersion.TLSv1_2
     tls.load_cert_chain(str(Path(credentials) / "server-cert"), str(Path(credentials) / "server-key"))
     tls.load_verify_locations(cafile=str(Path(credentials) / "client-ca"))
     tls.verify_mode = ssl.CERT_REQUIRED
-    server = Server((config["bind"], config.get("port", 9444)), Handler)
+    server = Server((config.get("bind", "127.0.0.1"), config.get("port", 9444)), Handler)
     server.tls, server.policy, server.credentials = tls, config, credentials
     database = config.get("state_database", "/var/lib/srg/control.sqlite3")
     server.controller = Controller(config, {"ssh": SSHAdapter(credentials), "home_assistant": HomeAssistantAdapter(credentials)}, database)

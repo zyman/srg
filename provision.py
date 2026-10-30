@@ -19,9 +19,14 @@ def main():
     args = parser.parse_args()
     if os.geteuid() != 0:
         parser.error("run as root on the gateway host")
-    root = Path(args.directory)
+    root = Path(args.directory).resolve()
     import ipaddress, re
-    ipaddress.ip_address(args.bind)
+    try:
+        address = ipaddress.IPv4Address(args.bind)
+        if address.is_unspecified:
+            raise ValueError("unspecified address")
+    except ValueError:
+        parser.error("--bind must be the gateway IPv4 address, not a wildcard")
     if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9.-]{0,252}", args.hostname):
         parser.error("invalid server hostname")
     if (root / "policy.json").exists() or (root / "ca").exists():
@@ -50,7 +55,7 @@ def main():
     (root / "secrets/client-ca").write_bytes(ca)
     (root / "ca.pem").write_bytes(ca)
     fingerprint = hashlib.sha256(ssl.PEM_cert_to_DER_cert((root / "client.pem").read_text())).hexdigest()
-    (root / "policy.json").write_text(json.dumps({"bind": args.bind, "port": 9444, "clients": [fingerprint], "resources": {"gateway": {"kind": "host"}}}, indent=2) + "\n")
+    (root / "policy.json").write_text(json.dumps({"bind": args.bind, "port": 9444, "clients": [fingerprint], "resources": {"gateway": {"kind": "host"}}, "read_grants": {fingerprint: ["gateway"]}, "actions": {}, "write_grants": {}, "state_database": "/var/lib/srg/control.sqlite3"}, indent=2) + "\n")
     for public in ("client.pem", "ca.pem", "policy.json"):
         (root / public).chmod(0o644)
     (root / "server.csr").unlink()

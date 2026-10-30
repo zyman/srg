@@ -8,7 +8,7 @@ library (Python 3.11+), with no subscription or cloud dependency.
 
 An agent gets named capabilities, not a root shell or a vault export. The
 operator installs trusted adapters and defines exact target allowlists. Each
-client certificate has its own explicit write grants; read authorization does
+client certificate has its own explicit read and write grants; read authorization does
 not automatically grant writes. A plan previews a change, and an apply request
 consumes that short-lived plan. Every request and execution phase is audited.
 
@@ -80,6 +80,11 @@ before the call, but external changes can still race that call.
 
 ## Deploy your own instance
 
+Start with [INSTALL.md](INSTALL.md) for complete client/server commands, backend
+examples, validation, revocation and troubleshooting. The overview below explains
+the trust boundaries. Policies from the first release must add explicit
+`read_grants`; omission now denies all resource reads.
+
 The release exporter includes only portable source, tests, this guide, the
 protocol, license and generic examples. It excludes the first deployment's
 inventory, fingerprints, host keys, policy and credentials:
@@ -111,7 +116,7 @@ python3 make-release.py --output /tmp/srg-reference.tar.gz
    `/usr/local/libexec/srg-action.py`, mode 0755; install exact operation/target
    mappings as root-owned mode-0600 `/etc/srg-actions.json`. The executor expects
    Linux Docker and/or Proxmox CLI paths. Create a dedicated unprivileged remote
-   account, give it only sudo for `/usr/bin/python3 -I
+   account, keep its home/startup files and authorized keys root-managed, and give it only sudo for `/usr/bin/python3 -I
    /usr/local/libexec/srg-action.py`, and use a separate gateway SSH key with:
 
    ```text
@@ -154,7 +159,8 @@ archive verified backups according to your retention policy. Audit insertion
 failure blocks execution. After a post-execution failure, inspect target state
 and the plan ledger; never assume that an HTTP error means nothing happened.
 
-Entries are hash chained for corruption/tampering detection. This is **not**
+Startup verifies the existing chain and refuses a corrupt ledger. Entries are
+hash chained for corruption/tampering detection. This is **not**
 immutable storage: an administrator can rewrite the database and recompute the
 chain, and unanchored tail truncation cannot be detected. Export checkpoints or
 ship logs to an independently administered collector for stronger guarantees.

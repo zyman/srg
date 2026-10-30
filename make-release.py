@@ -6,7 +6,8 @@ import tarfile
 
 FILES = ['gateway.py', 'client.py', 'control.py', 'action_adapters.py', 'audit.py',
          'ssh_action.py', 'provision.py', 'test_gateway.py', 'test_control.py',
-         'make-release.py', 'README.md', 'SECURITY.md', 'FRAMEWORK.md', 'srg.schema.json', 'PROTOCOL.md', 'CONTRIBUTING.md', 'LICENSE',
+         'make-release.py', 'README.md', 'SECURITY.md', 'INSTALL.md', 'SECURITY-REVIEW.md',
+         'test_install.py', 'ci/smoke-install.sh', 'examples/resources.json', 'examples/ha-action.json', 'FRAMEWORK.md', 'srg.schema.json', 'PROTOCOL.md', 'CONTRIBUTING.md', 'LICENSE',
          'examples/policy.json', 'examples/remote-policy.json',
          'examples/client.json', 'examples/srg.service', 'examples/github-workflow.yml']
 
