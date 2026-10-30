@@ -1,0 +1,20 @@
+name: SRG conformance
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  reference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Test reference implementation
+        run: python3 -m unittest discover -s . -p 'test_*.py'
+      - name: Verify standalone community archive
+        run: |
+          python3 make-release.py --output /tmp/srg-reference.tar.gz
+          mkdir /tmp/srg-export
+          tar -xzf /tmp/srg-reference.tar.gz -C /tmp/srg-export
+          python3 -m unittest discover -s /tmp/srg-export/srg-0.1 -p 'test_*.py'
+      - name: Check whitespace
+        run: git show --format= --check HEAD
