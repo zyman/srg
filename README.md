@@ -57,7 +57,9 @@ python3 client.py --config /path/to/client.json --audit
 The optional [MCP stdio bridge](MCP.md) exposes discovery, reads, capabilities,
 plan/apply, status and audit using your existing client identity. Install it on
 the agent computer; gateway restrictions and audit logging remain authoritative.
-See [the sample host configuration](examples/mcp-client.json).
+See [Codex setup and usage examples](MCP.md#codex-setup), the
+[Codex TOML configuration](examples/codex-mcp.toml), or the
+[generic host JSON configuration](examples/mcp-client.json).
 
 ## Documentation
 

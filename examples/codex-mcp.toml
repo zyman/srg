@@ -1,0 +1,9 @@
+# Merge this table into ~/.codex/config.toml; do not replace the whole file.
+# Replace all three absolute paths. Keep keys and client.json outside the checkout.
+[mcp_servers.srg]
+command = "/absolute/path/to/srg/.venv-mcp/bin/python"
+args = ["/absolute/path/to/srg/mcp_server.py", "--config", "/absolute/path/to/private/client.json"]
+startup_timeout_sec = 20
+tool_timeout_sec = 180
+enabled_tools = ["srg_resources", "srg_read", "srg_capabilities", "srg_plan", "srg_apply", "srg_status", "srg_audit"]
+# Existing Codex approval settings are intentionally preserved.

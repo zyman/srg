@@ -43,6 +43,89 @@ identity. It uses the existing SRG/1 HTTP contract. The bridge is tested with th
 pinned SDK client and the legacy `2025-11-25` initialize/stdio wire format; this is
 not a claim of certification against every application or MCP extension.
 
+## Codex setup
+
+Complete the installation above with a trusted SRG checkout and an already
+provisioned client identity. Use a persistent virtual environment, not a temporary
+folder. Registration does not provision a gateway or grant access to resources.
+
+Register the local stdio server (replace all absolute paths):
+
+```sh
+codex mcp add srg -- \
+  /absolute/path/to/srg/.venv-mcp/bin/python \
+  /absolute/path/to/srg/mcp_server.py \
+  --config /absolute/path/to/private/client.json
+codex mcp get srg
+```
+
+Then edit the existing `[mcp_servers.srg]` table in `~/.codex/config.toml` to
+match [examples/codex-mcp.toml](examples/codex-mcp.toml), including its 20-second
+startup timeout, 180-second tool timeout and seven-tool allowlist. Alternatively,
+merge that example table directly instead of running `codex mcp add`. Do not add
+a duplicate table or replace the rest of your configuration. The tool timeout
+allows for SRG's 130-second HTTP timeout; queued operations may still take longer.
+
+Codex clients on the same host share this configuration. See the
+[official Codex MCP documentation](https://developers.openai.com/codex/mcp/)
+for current configuration options. This example preserves existing approval
+settings. Server-side grants, target restrictions and audit logging still apply;
+MCP tool visibility is not permission to execute an action. SRG's local stdio
+bridge uses the configured client certificate, so it needs no MCP OAuth login or
+backend API token in Codex configuration.
+
+### Verify in the actual conversation
+
+After configuring, start a fresh session. If the desktop retains the old tool
+catalog, fully quit and reopen the app (Cmd+Q on macOS); closing a window may
+leave its backend running. Then ask:
+
+> Use the SRG MCP tools directly to list my granted resources and write
+> capabilities. Perform one permitted health read and check its audit event.
+> Do not plan or apply changes. Tell me if the tools are unavailable.
+
+Success means Codex actually invokes `srg_resources`, `srg_capabilities`, a
+permitted `srg_read`, and `srg_audit` in that conversation. `codex mcp get srg`
+only confirms registration; a separate CLI/subprocess test alone does not prove
+the active conversation loaded the tools. A shell fallback should be identified
+as a fallback, not reported as direct MCP access.
+
+If tools remain absent, inspect the active client's MCP startup diagnostics and
+check the executable, dependencies, paths and current configuration. If the CLI
+can read but the chat cannot see tools, investigate client loading before changing
+gateway permissions. If discovery works but access is denied, inspect the intended
+client's explicit grants; never broaden them merely to silence a failure.
+
+### Usage examples
+
+Use resource names and actions returned by discovery. The names below match the
+repository's illustrative [policy](examples/policy.json); they are not defaults
+or instructions to deploy that policy unchanged.
+
+| Intent | Tool call |
+|---|---|
+| Discover permitted resources | `srg_resources({})` |
+| Read the example gateway's health | `srg_read({"resource":"gateway","operation":"health"})` |
+| Discover allowed actions/targets | `srg_capabilities({})` |
+| Preview an owner-requested demo restart | `srg_plan({"action":"app-restart","target":"demo-app"})` |
+| Apply the reviewed plan once | `srg_apply({"plan_id":"<returned plan ID>"})` |
+| Check execution, including after a timeout | `srg_status({"plan_id":"<returned plan ID>"})` |
+| Inspect recent client audit events | `srg_audit({})` |
+
+Example read-only prompt: “Check the health of the resources I can access and
+report failures without making changes.” Example write request: “Restart
+`demo-app` using the granted `app-restart` action; review the preview, apply once,
+and report its final status.” A plan is not human authorization. Do not execute
+these example writes unless the owner actually requests the corresponding change.
+After an uncertain apply, inspect status and resource state instead of retrying.
+
+All forwarded requests retain the configured certificate's audit identity. See
+[audit coverage](#audit-coverage) for local-validation and host-log limitations.
+To remove just the integration, run `codex mcp remove srg` and reload the client.
+This does not revoke the certificate or remove its gateway grants. For upgrades,
+review the SRG release, update the trusted checkout and its virtual environment,
+then repeat discovery and read checks; the registered command runs that checkout.
+
 ## Available tools
 
 | Tool | Arguments | Behavior |
